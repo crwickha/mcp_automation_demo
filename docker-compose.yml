@@ -1,0 +1,33 @@
+services:
+  # ============================================
+  # Automation MCP Server
+  # ============================================
+  automation-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: automation-mcp
+    restart: always
+    environment:
+      - MERAKI_API_KEY=${MERAKI_API_KEY}
+      - MERAKI_ORG_ID=${MERAKI_ORG_ID:-}
+    volumes:
+      - ./templates:/app/templates:ro
+      - ./network_registry.yaml:/app/data/network_registry.yaml
+    networks:
+      - mcp_network
+
+  # ============================================
+  # Cloudflare Tunnel
+  # ============================================
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: always
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - mcp_network
+
+networks:
+  mcp_network:
+    driver: bridge
