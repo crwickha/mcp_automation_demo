@@ -12,7 +12,7 @@ services:
       - MERAKI_API_KEY=${MERAKI_API_KEY}
       - MERAKI_ORG_ID=${MERAKI_ORG_ID:-}
     volumes:
-      - ./templates:/app/templates:ro
+      - ./templates:/app/templates
       - ./network_registry.yaml:/app/data/network_registry.yaml
     networks:
       - mcp_network
