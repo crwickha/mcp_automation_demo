@@ -1,295 +1,237 @@
-# Branch Network Templates
-# Each tier defines the VLANs, SSIDs, firewall rules, and VPN config
-# for that size of branch office.
-#
-# Variables (auto-computed from network name like "114 - Langley"):
-#   {name}           - Full network name
-#   {location}       - Location portion (e.g. "Langley")
-#   {site_number}    - Numeric site ID (e.g. 114)
-#   {site_high}      - High octet: site_number // 256  (e.g. 0 for site 114, 1 for site 257)
-#   {site_low}       - Low octet:  site_number % 256   (e.g. 114 for site 114, 1 for site 257)
-#   {site_low_voip}  - Low octet + 1 (unique subnet for VoIP)
-#   {site_low_iot}   - Low octet + 2 (unique subnet for IoT)
-#
-# Addressing scheme:
-#   Corp   → 10.{site_high}.{site_low}.0/24      (unique per site, routed over VPN)
-#   Guest  → 192.168.100.0/24                     (same everywhere, local only)
-#   VoIP   → 10.{site_high}.{site_low_voip}.0/24  (unique per site, routed over VPN)
-#   IoT    → 10.{site_high}.{site_low_iot}.0/24   (unique per site, routed over VPN)
-
 product_types:
-  - appliance
-  - switch
-  - wireless
-
-# ──────────────────────────────────────────────
-# SMALL branch — 2 VLANs, 2 SSIDs
-# ──────────────────────────────────────────────
+- appliance
+- switch
+- wireless
 tiers:
   small:
-    description: "Small branch — Corp + Guest"
+    description: "Small branch \u2014 Corp + Guest"
     vlans:
-      - id: 10
-        name: Corp
-        subnet: "10.{site_high}.{site_low}.0/24"
-        appliance_ip: "10.{site_high}.{site_low}.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-      - id: 20
-        name: Guest
-        subnet: "192.168.100.0/24"
-        appliance_ip: "192.168.100.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-
+    - id: 10
+      name: Corp
+      subnet: 10.{site_high}.{site_low}.0/24
+      appliance_ip: 10.{site_high}.{site_low}.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
+    - id: 20
+      name: Guest
+      subnet: 192.168.100.0/24
+      appliance_ip: 192.168.100.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
     ssids:
-      - number: 0
-        name: "Corp-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "CorpWifi2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 10
-      - number: 1
-        name: "Guest-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "GuestWifi2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 20
-
+    - number: 0
+      name: Corp
+      enabled: true
+      auth_mode: psk
+      encryption_mode: wpa
+      psk: CorpWifi2024!
+      ip_assignment_mode: Bridge mode
+      default_vlan_id: 10
+    - number: 1
+      name: Guest
+      enabled: true
+      auth_mode: psk
+      encryption_mode: wpa
+      psk: GuestWifi2024!
+      ip_assignment_mode: Bridge mode
+      default_vlan_id: 20
     firewall_rules:
-      - comment: "Block guest to corp"
-        policy: deny
-        protocol: any
-        src_cidr: "192.168.100.0/24"
-        dest_cidr: "10.{site_high}.{site_low}.0/24"
-        dest_port: any
-        syslog_enabled: false
-
+    - comment: Block guest to corp
+      policy: deny
+      protocol: any
+      src_cidr: 192.168.100.0/24
+      dest_cidr: 10.{site_high}.{site_low}.0/24
+      dest_port: any
+      syslog_enabled: false
     vpn:
       mode: spoke
       hubs:
-        - hub_id: "L_660903245316622322"
-          name: "Home"
-          use_default_route: false
+      - hub_id: L_660903245316622322
+        name: Home
+        use_default_route: false
       subnets:
-        - local_subnet: "10.{site_high}.{site_low}.0/24"
-          use_vpn: true
-        - local_subnet: "192.168.100.0/24"
-          use_vpn: false
-
-  # ──────────────────────────────────────────────
-  # MEDIUM branch — adds VoIP VLAN + SSID
-  # ──────────────────────────────────────────────
+      - local_subnet: 10.{site_high}.{site_low}.0/24
+        use_vpn: true
+      - local_subnet: 192.168.100.0/24
+        use_vpn: false
   medium:
-    description: "Medium branch — Corp + Guest + VoIP"
+    description: "Medium branch \u2014 Corp + Guest + VoIP"
     vlans:
-      - id: 10
-        name: Corp
-        subnet: "10.{site_high}.{site_low}.0/24"
-        appliance_ip: "10.{site_high}.{site_low}.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-      - id: 20
-        name: Guest
-        subnet: "192.168.100.0/24"
-        appliance_ip: "192.168.100.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-      - id: 30
-        name: VoIP
-        subnet: "10.{site_high}.{site_low_voip}.0/24"
-        appliance_ip: "10.{site_high}.{site_low_voip}.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-
+    - id: 10
+      name: Corp
+      subnet: 10.{site_high}.{site_low}.0/24
+      appliance_ip: 10.{site_high}.{site_low}.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
+    - id: 20
+      name: Guest
+      subnet: 192.168.100.0/24
+      appliance_ip: 192.168.100.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
+    - id: 30
+      name: VoIP
+      subnet: 10.{site_high}.{site_low_voip}.0/24
+      appliance_ip: 10.{site_high}.{site_low_voip}.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
     ssids:
-      - number: 0
-        name: "Corp-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "CorpWifi2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 10
-      - number: 1
-        name: "Guest-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "GuestWifi2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 20
-      - number: 2
-        name: "VoIP-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "VoipWifi2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 30
-
+    - number: 0
+      name: Corp
+      enabled: true
+      auth_mode: psk
+      encryption_mode: wpa
+      psk: CorpWifi2024!
+      ip_assignment_mode: Bridge mode
+      default_vlan_id: 10
+    - number: 1
+      name: Guest
+      enabled: true
+      auth_mode: psk
+      encryption_mode: wpa
+      psk: GuestWifi2024!
+      ip_assignment_mode: Bridge mode
+      default_vlan_id: 20
     firewall_rules:
-      - comment: "Block guest to corp"
-        policy: deny
-        protocol: any
-        src_cidr: "192.168.100.0/24"
-        dest_cidr: "10.{site_high}.{site_low}.0/24"
-        dest_port: any
-        syslog_enabled: false
-      - comment: "Block guest to VoIP"
-        policy: deny
-        protocol: any
-        src_cidr: "192.168.100.0/24"
-        dest_cidr: "10.{site_high}.{site_low_voip}.0/24"
-        dest_port: any
-        syslog_enabled: false
-      - comment: "Allow VoIP to corp (SIP/RTP)"
-        policy: allow
-        protocol: any
-        src_cidr: "10.{site_high}.{site_low_voip}.0/24"
-        dest_cidr: "10.{site_high}.{site_low}.0/24"
-        dest_port: any
-        syslog_enabled: false
-
+    - comment: Block guest to corp
+      policy: deny
+      protocol: any
+      src_cidr: 192.168.100.0/24
+      dest_cidr: 10.{site_high}.{site_low}.0/24
+      dest_port: any
+      syslog_enabled: false
+    - comment: Block guest to VoIP
+      policy: deny
+      protocol: any
+      src_cidr: 192.168.100.0/24
+      dest_cidr: 10.{site_high}.{site_low_voip}.0/24
+      dest_port: any
+      syslog_enabled: false
+    - comment: Allow VoIP to corp (SIP/RTP)
+      policy: allow
+      protocol: any
+      src_cidr: 10.{site_high}.{site_low_voip}.0/24
+      dest_cidr: 10.{site_high}.{site_low}.0/24
+      dest_port: any
+      syslog_enabled: false
     vpn:
       mode: spoke
       hubs:
-        - hub_id: "L_660903245316622322"
-          name: "Home"
-          use_default_route: false
+      - hub_id: L_660903245316622322
+        name: Home
+        use_default_route: false
       subnets:
-        - local_subnet: "10.{site_high}.{site_low}.0/24"
-          use_vpn: true
-        - local_subnet: "192.168.100.0/24"
-          use_vpn: false
-        - local_subnet: "10.{site_high}.{site_low_voip}.0/24"
-          use_vpn: true
-
-  # ──────────────────────────────────────────────
-  # LARGE branch — adds IoT VLAN
-  # ──────────────────────────────────────────────
+      - local_subnet: 10.{site_high}.{site_low}.0/24
+        use_vpn: true
+      - local_subnet: 192.168.100.0/24
+        use_vpn: false
+      - local_subnet: 10.{site_high}.{site_low_voip}.0/24
+        use_vpn: true
   large:
-    description: "Large branch — Corp + Guest + VoIP + IoT"
+    description: "Large branch \u2014 Corp + Guest + VoIP + IoT"
     vlans:
-      - id: 10
-        name: Corp
-        subnet: "10.{site_high}.{site_low}.0/24"
-        appliance_ip: "10.{site_high}.{site_low}.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-      - id: 20
-        name: Guest
-        subnet: "192.168.100.0/24"
-        appliance_ip: "192.168.100.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-      - id: 30
-        name: VoIP
-        subnet: "10.{site_high}.{site_low_voip}.0/24"
-        appliance_ip: "10.{site_high}.{site_low_voip}.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-      - id: 40
-        name: IoT
-        subnet: "10.{site_high}.{site_low_iot}.0/24"
-        appliance_ip: "10.{site_high}.{site_low_iot}.1"
-        dhcp_handling: "Run a DHCP server"
-        dns_nameservers: "upstream_dns"
-
+    - id: 10
+      name: Corp
+      subnet: 10.{site_high}.{site_low}.0/24
+      appliance_ip: 10.{site_high}.{site_low}.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
+    - id: 20
+      name: Guest
+      subnet: 192.168.100.0/24
+      appliance_ip: 192.168.100.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
+    - id: 30
+      name: VoIP
+      subnet: 10.{site_high}.{site_low_voip}.0/24
+      appliance_ip: 10.{site_high}.{site_low_voip}.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
+    - id: 40
+      name: IoT
+      subnet: 10.{site_high}.{site_low_iot}.0/24
+      appliance_ip: 10.{site_high}.{site_low_iot}.1
+      dhcp_handling: Run a DHCP server
+      dns_nameservers: upstream_dns
+    - id: 99
+      name: Mgmt
+      subnet: 10.{site_high}.{site_low_mgmt}.0/24
+      appliance_ip: 10.{site_high}.{site_low_mgmt}.1
+      dhcp_handling: Do not respond to DHCP requests
+      dns_nameservers: upstream_dns
     ssids:
-      - number: 0
-        name: "Corp-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "CorpWifi2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 10
-      - number: 1
-        name: "Guest-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "GuestWifi2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 20
-      - number: 2
-        name: "VoIP-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "VoipWifi2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 30
-      - number: 3
-        name: "IoT-{location}"
-        enabled: true
-        auth_mode: psk
-        encryption_mode: wpa
-        psk: "IoTdevices2024!"
-        ip_assignment_mode: "Bridge mode"
-        default_vlan_id: 40
-
+    - number: 0
+      name: Corp
+      enabled: true
+      auth_mode: psk
+      encryption_mode: wpa
+      psk: CorpWifi2024!
+      ip_assignment_mode: Bridge mode
+      default_vlan_id: 10
+    - number: 1
+      name: Guest
+      enabled: true
+      auth_mode: psk
+      encryption_mode: wpa
+      psk: GuestWifi2024!
+      ip_assignment_mode: Bridge mode
+      default_vlan_id: 20
     firewall_rules:
-      - comment: "Block guest to corp"
-        policy: deny
-        protocol: any
-        src_cidr: "192.168.100.0/24"
-        dest_cidr: "10.{site_high}.{site_low}.0/24"
-        dest_port: any
-        syslog_enabled: false
-      - comment: "Block guest to VoIP"
-        policy: deny
-        protocol: any
-        src_cidr: "192.168.100.0/24"
-        dest_cidr: "10.{site_high}.{site_low_voip}.0/24"
-        dest_port: any
-        syslog_enabled: false
-      - comment: "Block guest to IoT"
-        policy: deny
-        protocol: any
-        src_cidr: "192.168.100.0/24"
-        dest_cidr: "10.{site_high}.{site_low_iot}.0/24"
-        dest_port: any
-        syslog_enabled: false
-      - comment: "Block IoT to corp"
-        policy: deny
-        protocol: any
-        src_cidr: "10.{site_high}.{site_low_iot}.0/24"
-        dest_cidr: "10.{site_high}.{site_low}.0/24"
-        dest_port: any
-        syslog_enabled: false
-      - comment: "Block IoT to VoIP"
-        policy: deny
-        protocol: any
-        src_cidr: "10.{site_high}.{site_low_iot}.0/24"
-        dest_cidr: "10.{site_high}.{site_low_voip}.0/24"
-        dest_port: any
-        syslog_enabled: false
-      - comment: "Allow VoIP to corp (SIP/RTP)"
-        policy: allow
-        protocol: any
-        src_cidr: "10.{site_high}.{site_low_voip}.0/24"
-        dest_cidr: "10.{site_high}.{site_low}.0/24"
-        dest_port: any
-        syslog_enabled: false
-
+    - comment: Block guest to corp
+      policy: deny
+      protocol: any
+      src_cidr: 192.168.100.0/24
+      dest_cidr: 10.{site_high}.{site_low}.0/24
+      dest_port: any
+      syslog_enabled: false
+    - comment: Block guest to VoIP
+      policy: deny
+      protocol: any
+      src_cidr: 192.168.100.0/24
+      dest_cidr: 10.{site_high}.{site_low_voip}.0/24
+      dest_port: any
+      syslog_enabled: false
+    - comment: Block guest to IoT
+      policy: deny
+      protocol: any
+      src_cidr: 192.168.100.0/24
+      dest_cidr: 10.{site_high}.{site_low_iot}.0/24
+      dest_port: any
+      syslog_enabled: false
+    - comment: Block IoT to corp
+      policy: deny
+      protocol: any
+      src_cidr: 10.{site_high}.{site_low_iot}.0/24
+      dest_cidr: 10.{site_high}.{site_low}.0/24
+      dest_port: any
+      syslog_enabled: false
+    - comment: Block IoT to VoIP
+      policy: deny
+      protocol: any
+      src_cidr: 10.{site_high}.{site_low_iot}.0/24
+      dest_cidr: 10.{site_high}.{site_low_voip}.0/24
+      dest_port: any
+      syslog_enabled: false
+    - comment: Allow VoIP to corp (SIP/RTP)
+      policy: allow
+      protocol: any
+      src_cidr: 10.{site_high}.{site_low_voip}.0/24
+      dest_cidr: 10.{site_high}.{site_low}.0/24
+      dest_port: any
+      syslog_enabled: false
     vpn:
       mode: spoke
       hubs:
-        - hub_id: "L_660903245316622322"
-          name: "Home"
-          use_default_route: false
+      - hub_id: L_660903245316622322
+        name: Home
+        use_default_route: false
       subnets:
-        - local_subnet: "10.{site_high}.{site_low}.0/24"
-          use_vpn: true
-        - local_subnet: "192.168.100.0/24"
-          use_vpn: false
-        - local_subnet: "10.{site_high}.{site_low_voip}.0/24"
-          use_vpn: true
-        - local_subnet: "10.{site_high}.{site_low_iot}.0/24"
-          use_vpn: true
+      - local_subnet: 10.{site_high}.{site_low}.0/24
+        use_vpn: true
+      - local_subnet: 192.168.100.0/24
+        use_vpn: false
+      - local_subnet: 10.{site_high}.{site_low_voip}.0/24
+        use_vpn: true
+      - local_subnet: 10.{site_high}.{site_low_iot}.0/24
+        use_vpn: true

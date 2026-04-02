@@ -322,6 +322,165 @@ TOOLS = [
             "required": ["network_name"],
         },
     },
+    {
+        "name": "auto_update_template",
+        "description": (
+            "Modify an existing provisioning template tier, or create a new template/tier. "
+            "Changes are saved to the YAML template file. After saving, a propagation preview "
+            "shows what would change on every existing site built from that template+tier. "
+            "This tool does NOT modify any live sites — use auto_sync_template for that."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "template": {
+                    "type": "string",
+                    "description": "Template name (e.g. 'branch')",
+                    "default": "branch",
+                },
+                "tier": {
+                    "type": "string",
+                    "description": "Tier name to modify or create (e.g. 'small', 'medium', 'large', or a new name)",
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Tier description (required when creating a new tier)",
+                },
+                "add_vlans": {
+                    "type": "array",
+                    "description": "VLANs to add to the template tier",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "integer", "description": "VLAN ID"},
+                            "name": {"type": "string", "description": "VLAN name"},
+                            "subnet": {"type": "string", "description": "Subnet with template vars, e.g. '10.{site_high}.{site_low}.0/24'"},
+                            "appliance_ip": {"type": "string", "description": "Gateway IP with template vars"},
+                            "dhcp_handling": {"type": "string", "default": "Run a DHCP server"},
+                            "dns_nameservers": {"type": "string", "default": "upstream_dns"},
+                        },
+                        "required": ["id", "name", "subnet", "appliance_ip"],
+                    },
+                },
+                "remove_vlans": {
+                    "type": "array",
+                    "description": "VLAN IDs to remove from the template tier",
+                    "items": {"type": "integer"},
+                },
+                "add_ssids": {
+                    "type": "array",
+                    "description": "SSIDs to add to the template tier",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "number": {"type": "integer", "description": "SSID slot number (0-14)"},
+                            "name": {"type": "string", "description": "SSID name (can use {location} var)"},
+                            "enabled": {"type": "boolean", "default": True},
+                            "auth_mode": {"type": "string", "default": "psk"},
+                            "encryption_mode": {"type": "string", "default": "wpa"},
+                            "psk": {"type": "string", "description": "Pre-shared key"},
+                            "ip_assignment_mode": {"type": "string", "default": "Bridge mode"},
+                            "default_vlan_id": {"type": "integer", "description": "VLAN to map this SSID to"},
+                        },
+                        "required": ["number", "name"],
+                    },
+                },
+                "remove_ssids": {
+                    "type": "array",
+                    "description": "SSID slot numbers to remove from the template tier",
+                    "items": {"type": "integer"},
+                },
+                "add_firewall_rules": {
+                    "type": "array",
+                    "description": "Firewall rules to add to the template tier",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "comment": {"type": "string"},
+                            "policy": {"type": "string", "enum": ["allow", "deny"]},
+                            "protocol": {"type": "string", "default": "any"},
+                            "src_cidr": {"type": "string", "default": "Any"},
+                            "dest_cidr": {"type": "string", "default": "Any"},
+                            "dest_port": {"type": "string", "default": "any"},
+                            "syslog_enabled": {"type": "boolean", "default": False},
+                        },
+                        "required": ["comment", "policy"],
+                    },
+                },
+                "remove_firewall_rules": {
+                    "type": "array",
+                    "description": "Firewall rule comments to remove from the template tier",
+                    "items": {"type": "string"},
+                },
+                "set_vpn": {
+                    "type": "object",
+                    "description": "Replace VPN config for this tier",
+                    "properties": {
+                        "mode": {"type": "string", "enum": ["spoke", "hub", "none"]},
+                        "hubs": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "hub_id": {"type": "string"},
+                                    "name": {"type": "string"},
+                                    "use_default_route": {"type": "boolean", "default": False},
+                                },
+                                "required": ["hub_id"],
+                            },
+                        },
+                        "subnets": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "local_subnet": {"type": "string"},
+                                    "use_vpn": {"type": "boolean"},
+                                },
+                                "required": ["local_subnet", "use_vpn"],
+                            },
+                        },
+                    },
+                },
+            },
+            "required": ["template", "tier"],
+        },
+    },
+    {
+        "name": "auto_sync_template",
+        "description": (
+            "Propagate the current template definition to all existing sites built from it. "
+            "Compares the template against each site's registry entry to determine what to "
+            "add or remove, preserves site-specific customizations, and validates the "
+            "'automated' tag before touching any site. "
+            "Use 'dry_run: true' (default) to preview changes. Set 'dry_run: false' to apply. "
+            "Optionally target a single site with 'network_name'."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "template": {
+                    "type": "string",
+                    "description": "Template name (e.g. 'branch')",
+                    "default": "branch",
+                },
+                "tier": {
+                    "type": "string",
+                    "description": "Tier name to sync (e.g. 'small', 'medium', 'large')",
+                },
+                "network_name": {
+                    "type": "string",
+                    "description": "Optional: sync only this specific site (name or site number). If omitted, syncs all matching sites.",
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "If true (default), preview changes without applying. Set false to apply.",
+                    "default": True,
+                },
+            },
+            "required": ["template", "tier"],
+        },
+    },
 ]
 
 # ──────────────────────────────────────────────
@@ -359,7 +518,52 @@ def tool_list_networks() -> str:
     entries = load_registry()
     if not entries:
         return json.dumps({"message": "No networks in registry yet.", "networks": []})
-    return json.dumps({"count": len(entries), "networks": entries}, indent=2)
+
+    # Enrich each entry with sync status
+    enriched = []
+    for entry in entries:
+        e = dict(entry)
+        tpl_name = e.get("template", "")
+        tier_name = e.get("tier", "")
+        tpl_data = templates.get(tpl_name, {})
+        tier = tpl_data.get("tiers", {}).get(tier_name)
+
+        if not tier:
+            e["sync_status"] = "unknown"
+            e["sync_detail"] = f"Template '{tpl_name}/{tier_name}' not found"
+            enriched.append(e)
+            continue
+
+        # Compare template VLANs vs registry VLANs
+        tpl_vlan_ids = {v["id"] for v in tier.get("vlans", [])}
+        reg_vlan_ids = {v["id"] for v in e.get("vlans", [])}
+        tpl_ssid_nums = {s["number"] for s in tier.get("ssids", [])}
+        reg_ssid_nums = {s["number"] for s in e.get("ssids", [])}
+
+        missing_vlans = tpl_vlan_ids - reg_vlan_ids
+        extra_vlans = reg_vlan_ids - tpl_vlan_ids
+        missing_ssids = tpl_ssid_nums - reg_ssid_nums
+        extra_ssids = reg_ssid_nums - tpl_ssid_nums
+
+        drift = []
+        if missing_vlans:
+            drift.append(f"Missing VLANs: {sorted(missing_vlans)}")
+        if extra_vlans:
+            drift.append(f"Extra VLANs (custom): {sorted(extra_vlans)}")
+        if missing_ssids:
+            drift.append(f"Missing SSIDs: {sorted(missing_ssids)}")
+        if extra_ssids:
+            drift.append(f"Extra SSIDs (custom): {sorted(extra_ssids)}")
+
+        if not drift:
+            e["sync_status"] = "in_sync"
+        else:
+            e["sync_status"] = "drift_detected"
+            e["sync_drift"] = drift
+
+        enriched.append(e)
+
+    return json.dumps({"count": len(enriched), "networks": enriched}, indent=2)
 
 
 # ──────────────────────────────────────────────
@@ -388,6 +592,7 @@ def compute_site_octets(site_number: int) -> Dict[str, str]:
         "site_low": str(low),
         "site_low_voip": str(low + 1),
         "site_low_iot": str(low + 2),
+        "site_low_mgmt": str(low + 3),
     }
 
 
@@ -564,8 +769,10 @@ def tool_create_branch_network(args: Dict) -> str:
                 "enabled": ssid_cfg.get("enabled", True),
                 "authMode": ssid_cfg.get("auth_mode", "psk"),
                 "ipAssignmentMode": ssid_cfg.get("ip_assignment_mode", "Bridge mode"),
-                "defaultVlanId": ssid_cfg.get("default_vlan_id", 1),
             }
+            if ssid_cfg.get("default_vlan_id"):
+                params["useVlanTagging"] = True
+                params["defaultVlanId"] = ssid_cfg["default_vlan_id"]
             if ssid_cfg.get("encryption_mode"):
                 params["encryptionMode"] = ssid_cfg["encryption_mode"]
             if ssid_cfg.get("psk"):
@@ -956,6 +1163,7 @@ def tool_update_branch_network(args: Dict) -> str:
                 "ipAssignmentMode": s.get("ip_assignment_mode", "Bridge mode"),
             }
             if s.get("default_vlan_id"):
+                params["useVlanTagging"] = True
                 params["defaultVlanId"] = s["default_vlan_id"]
             if s.get("encryption_mode"):
                 params["encryptionMode"] = s["encryption_mode"]
@@ -1114,6 +1322,813 @@ def tool_update_branch_network(args: Dict) -> str:
 
 
 # ──────────────────────────────────────────────
+# Tool: update_template
+# ──────────────────────────────────────────────
+
+VALID_TEMPLATE_VARS = {
+    "name", "location", "site_number",
+    "site_high", "site_low", "site_low_voip", "site_low_iot", "site_low_mgmt",
+}
+
+
+def validate_template_ip(value: str, field_name: str) -> Optional[str]:
+    """Validate that a subnet or IP template string will render to a valid address.
+
+    Substitutes all known template variables with test values, then checks
+    the result is a valid IPv4 address or CIDR.
+    Returns an error message, or None if valid.
+    """
+    # Substitute template vars with realistic test values
+    test_vars = {
+        "name": "999 - Test", "location": "Test", "site_number": "999",
+        "site_high": "3", "site_low": "231",
+        "site_low_voip": "232", "site_low_iot": "233", "site_low_mgmt": "234",
+    }
+    rendered = value
+    for k, v in test_vars.items():
+        rendered = rendered.replace(f"{{{k}}}", v)
+
+    # Check for unresolved variables
+    if "{" in rendered or "}" in rendered:
+        unknown = re.findall(r"\{(\w+)\}", rendered)
+        return (
+            f"{field_name}: unknown template variable(s): {unknown}. "
+            f"Valid variables: {sorted(VALID_TEMPLATE_VARS)}"
+        )
+
+    # Strip CIDR prefix for IP validation
+    ip_part = rendered.split("/")[0]
+    octets = ip_part.split(".")
+    if len(octets) != 4:
+        return (
+            f"{field_name}: '{value}' renders to '{rendered}' which has "
+            f"{len(octets)} octets instead of 4"
+        )
+    for i, octet in enumerate(octets):
+        try:
+            n = int(octet)
+            if n < 0 or n > 255:
+                return f"{field_name}: '{value}' renders to '{rendered}' — octet {i+1} ({n}) is out of range"
+        except ValueError:
+            return f"{field_name}: '{value}' renders to '{rendered}' — octet {i+1} ('{octet}') is not a number"
+
+    # Validate CIDR prefix if present
+    if "/" in rendered:
+        prefix = rendered.split("/")[1]
+        try:
+            p = int(prefix)
+            if p < 0 or p > 32:
+                return f"{field_name}: CIDR prefix /{prefix} is out of range (0-32)"
+        except ValueError:
+            return f"{field_name}: CIDR prefix '/{prefix}' is not a number"
+
+    return None
+
+
+def tool_update_template(args: Dict) -> str:
+    """Modify a template tier and preview propagation impact on existing sites."""
+    template_name = args.get("template", "branch")
+    tier_name = args.get("tier", "")
+
+    if not tier_name:
+        return json.dumps({"error": "tier is required"})
+
+    tpl_data = templates.get(template_name)
+    creating_template = tpl_data is None
+    creating_tier = False
+
+    if creating_template:
+        # New template — start from scratch
+        tpl_data = {
+            "product_types": ["appliance", "switch", "wireless"],
+            "tiers": {},
+        }
+        creating_tier = True
+
+    tiers = tpl_data.get("tiers", {})
+    if tier_name not in tiers:
+        creating_tier = True
+        desc = args.get("description", "")
+        if not desc:
+            return json.dumps({
+                "error": f"Tier '{tier_name}' does not exist in template '{template_name}'",
+                "hint": "Provide a 'description' to create a new tier",
+            })
+        tiers[tier_name] = {
+            "description": desc,
+            "vlans": [],
+            "ssids": [],
+            "firewall_rules": [],
+            "vpn": {},
+        }
+
+    tier = tiers[tier_name]
+
+    # Snapshot the old tier state for diff
+    old_vlan_ids = {v["id"] for v in tier.get("vlans", [])}
+    old_ssid_nums = {s["number"] for s in tier.get("ssids", [])}
+    old_fw_comments = {r.get("comment", "") for r in tier.get("firewall_rules", [])}
+    old_vpn = tier.get("vpn", {})
+
+    changes = []
+
+    # ── Update description ──
+    if args.get("description") and not creating_tier:
+        old_desc = tier.get("description", "")
+        tier["description"] = args["description"]
+        changes.append(f"Description: '{old_desc}' -> '{args['description']}'")
+
+    # ── Validate VLAN subnets/IPs before making any changes ──
+    validation_errors = []
+    for v in args.get("add_vlans", []):
+        err = validate_template_ip(v["subnet"], f"VLAN {v['id']} subnet")
+        if err:
+            validation_errors.append(err)
+        err = validate_template_ip(v["appliance_ip"], f"VLAN {v['id']} appliance_ip")
+        if err:
+            validation_errors.append(err)
+    if validation_errors:
+        return json.dumps({
+            "error": "Template validation failed",
+            "validation_errors": validation_errors,
+            "hint": f"Valid template variables: {sorted(VALID_TEMPLATE_VARS)}",
+        }, indent=2)
+
+    # ── Add VLANs ──
+    for v in args.get("add_vlans", []):
+        existing = next((ev for ev in tier["vlans"] if ev["id"] == v["id"]), None)
+        if existing:
+            changes.append(f"Updated VLAN {v['id']} ({v['name']})")
+            existing.update(v)
+        else:
+            tier["vlans"].append({
+                "id": v["id"],
+                "name": v["name"],
+                "subnet": v["subnet"],
+                "appliance_ip": v["appliance_ip"],
+                "dhcp_handling": v.get("dhcp_handling", "Run a DHCP server"),
+                "dns_nameservers": v.get("dns_nameservers", "upstream_dns"),
+            })
+            changes.append(f"Added VLAN {v['id']} ({v['name']}) — {v['subnet']}")
+
+    # ── Remove VLANs ──
+    for vid in args.get("remove_vlans", []):
+        before = len(tier["vlans"])
+        tier["vlans"] = [v for v in tier["vlans"] if v["id"] != vid]
+        if len(tier["vlans"]) < before:
+            changes.append(f"Removed VLAN {vid}")
+
+    # ── Add SSIDs ──
+    for s in args.get("add_ssids", []):
+        existing = next((es for es in tier["ssids"] if es["number"] == s["number"]), None)
+        if existing:
+            changes.append(f"Updated SSID {s['number']} ({s['name']})")
+            existing.update(s)
+        else:
+            ssid_entry = {
+                "number": s["number"],
+                "name": s["name"],
+                "enabled": s.get("enabled", True),
+                "auth_mode": s.get("auth_mode", "psk"),
+                "encryption_mode": s.get("encryption_mode", "wpa"),
+                "ip_assignment_mode": s.get("ip_assignment_mode", "Bridge mode"),
+            }
+            if s.get("psk"):
+                ssid_entry["psk"] = s["psk"]
+            if s.get("default_vlan_id"):
+                ssid_entry["default_vlan_id"] = s["default_vlan_id"]
+            tier["ssids"].append(ssid_entry)
+            changes.append(f"Added SSID {s['number']} ({s['name']})")
+
+    # ── Remove SSIDs ──
+    for snum in args.get("remove_ssids", []):
+        before = len(tier["ssids"])
+        tier["ssids"] = [s for s in tier["ssids"] if s["number"] != snum]
+        if len(tier["ssids"]) < before:
+            changes.append(f"Removed SSID {snum}")
+
+    # ── Add firewall rules ──
+    for r in args.get("add_firewall_rules", []):
+        tier["firewall_rules"].append({
+            "comment": r.get("comment", ""),
+            "policy": r.get("policy", "deny"),
+            "protocol": r.get("protocol", "any"),
+            "src_cidr": r.get("src_cidr", "Any"),
+            "dest_cidr": r.get("dest_cidr", "Any"),
+            "dest_port": r.get("dest_port", "any"),
+            "syslog_enabled": r.get("syslog_enabled", False),
+        })
+        changes.append(f"Added firewall rule: {r.get('comment', '')}")
+
+    # ── Remove firewall rules ──
+    for comment in args.get("remove_firewall_rules", []):
+        before = len(tier["firewall_rules"])
+        tier["firewall_rules"] = [
+            r for r in tier["firewall_rules"] if r.get("comment", "") != comment
+        ]
+        if len(tier["firewall_rules"]) < before:
+            changes.append(f"Removed firewall rule: {comment}")
+
+    # ── Set VPN ──
+    if args.get("set_vpn") is not None:
+        tier["vpn"] = args["set_vpn"]
+        changes.append(f"Set VPN config: mode={args['set_vpn'].get('mode', 'none')}")
+
+    if not changes and not creating_tier:
+        return json.dumps({"error": "No changes specified"})
+
+    if creating_tier:
+        changes.insert(0, f"Created new tier '{tier_name}'")
+    if creating_template:
+        changes.insert(0, f"Created new template '{template_name}'")
+
+    # ── Save the template ──
+    tpl_data["tiers"][tier_name] = tier
+    tpl_path = os.path.join(TEMPLATE_DIR, f"{template_name}.yaml")
+    with open(tpl_path, "w") as f:
+        yaml.dump(tpl_data, f, default_flow_style=False, sort_keys=False)
+
+    # Reload into memory
+    templates[template_name] = tpl_data
+    logger.info(f"Template '{template_name}/{tier_name}' updated: {len(changes)} changes")
+
+    # ── Compute propagation preview ──
+    new_vlan_ids = {v["id"] for v in tier.get("vlans", [])}
+    new_ssid_nums = {s["number"] for s in tier.get("ssids", [])}
+    new_fw_comments = {r.get("comment", "") for r in tier.get("firewall_rules", [])}
+
+    vlans_added = new_vlan_ids - old_vlan_ids
+    vlans_removed = old_vlan_ids - new_vlan_ids
+    ssids_added = new_ssid_nums - old_ssid_nums
+    ssids_removed = old_ssid_nums - new_ssid_nums
+    fw_added = new_fw_comments - old_fw_comments
+    fw_removed = old_fw_comments - new_fw_comments
+    vpn_changed = tier.get("vpn", {}) != old_vpn
+
+    # Find all registry sites using this template+tier
+    registry = load_registry()
+    affected_sites = [
+        e for e in registry
+        if e.get("template") == template_name and e.get("tier") == tier_name
+    ]
+
+    propagation = []
+    for site in affected_sites:
+        site_changes = []
+        site_vlan_ids = {v["id"] for v in site.get("vlans", [])}
+        site_ssid_nums = {s["number"] for s in site.get("ssids", [])}
+
+        # VLANs to add (in new template, not yet on site per registry)
+        for vid in vlans_added:
+            if vid not in site_vlan_ids:
+                vlan_def = next(v for v in tier["vlans"] if v["id"] == vid)
+                site_changes.append(f"Add VLAN {vid} ({vlan_def['name']})")
+
+        # VLANs to remove (removed from template, exists on site per registry)
+        for vid in vlans_removed:
+            if vid in site_vlan_ids:
+                site_changes.append(f"Remove VLAN {vid}")
+
+        # SSIDs to add
+        for snum in ssids_added:
+            if snum not in site_ssid_nums:
+                ssid_def = next(s for s in tier["ssids"] if s["number"] == snum)
+                site_changes.append(f"Add SSID {snum} ({ssid_def['name']})")
+
+        # SSIDs to remove
+        for snum in ssids_removed:
+            if snum in site_ssid_nums:
+                site_changes.append(f"Disable SSID {snum}")
+
+        # Firewall rules
+        for comment in fw_added:
+            site_changes.append(f"Add firewall rule: {comment}")
+        for comment in fw_removed:
+            site_changes.append(f"Remove firewall rule: {comment}")
+
+        # VPN
+        if vpn_changed:
+            site_changes.append("Update VPN config")
+
+        # Detect customizations (VLANs/SSIDs on site but not in OLD or NEW template)
+        customizations = []
+        all_template_vlan_ids = old_vlan_ids | new_vlan_ids
+        for vid in site_vlan_ids:
+            if vid not in all_template_vlan_ids:
+                vlan_name = next(
+                    (v["name"] for v in site.get("vlans", []) if v["id"] == vid), ""
+                )
+                customizations.append(f"Custom VLAN {vid} ({vlan_name}) — preserved")
+
+        all_template_ssid_nums = old_ssid_nums | new_ssid_nums
+        for snum in site_ssid_nums:
+            if snum not in all_template_ssid_nums:
+                ssid_name = next(
+                    (s["name"] for s in site.get("ssids", []) if s["number"] == snum), ""
+                )
+                customizations.append(f"Custom SSID {snum} ({ssid_name}) — preserved")
+
+        propagation.append({
+            "site": site["name"],
+            "network_id": site["network_id"],
+            "changes": site_changes if site_changes else ["No changes needed"],
+            "customizations": customizations if customizations else [],
+        })
+
+    result = {
+        "status": "saved",
+        "template": template_name,
+        "tier": tier_name,
+        "template_changes": changes,
+        "template_state": {
+            "vlans": len(tier.get("vlans", [])),
+            "ssids": len(tier.get("ssids", [])),
+            "firewall_rules": len(tier.get("firewall_rules", [])),
+            "vpn_mode": tier.get("vpn", {}).get("mode", "none"),
+        },
+        "propagation_preview": {
+            "affected_sites": len(affected_sites),
+            "sites": propagation,
+        },
+        "next_step": (
+            f"Use auto_sync_template with template='{template_name}' and tier='{tier_name}' "
+            "to apply these changes to the affected sites."
+            if affected_sites else "No existing sites to propagate to."
+        ),
+    }
+
+    return json.dumps(result, indent=2, default=str)
+
+
+# ──────────────────────────────────────────────
+# Tool: sync_template
+# ──────────────────────────────────────────────
+
+def tool_sync_template(args: Dict) -> str:
+    """Propagate current template to matching sites, preserving customizations."""
+    template_name = args.get("template", "branch")
+    tier_name = args.get("tier", "")
+    target_name = args.get("network_name", "")
+    dry_run = args.get("dry_run", True)
+
+    if not tier_name:
+        return json.dumps({"error": "tier is required"})
+
+    tpl_data = templates.get(template_name)
+    if not tpl_data:
+        return json.dumps({"error": f"Template '{template_name}' not found"})
+
+    tier = tpl_data.get("tiers", {}).get(tier_name)
+    if not tier:
+        return json.dumps({"error": f"Tier '{tier_name}' not found in template '{template_name}'"})
+
+    if not dashboard:
+        return json.dumps({"error": "Meraki API not initialized"})
+
+    # Find matching sites in registry
+    registry = load_registry()
+    sites = [
+        e for e in registry
+        if e.get("template") == template_name and e.get("tier") == tier_name
+    ]
+
+    # Filter to single site if requested
+    if target_name:
+        query = target_name.strip()
+        sites = [
+            e for e in sites
+            if e["name"] == query
+            or str(e.get("site_number", "")) == query
+            or query.lower() in e.get("location", "").lower()
+        ]
+        if not sites:
+            return json.dumps({
+                "error": f"No site matching '{target_name}' found in registry for {template_name}/{tier_name}",
+            })
+
+    if not sites:
+        return json.dumps({
+            "status": "no_sites",
+            "message": f"No sites in registry use template '{template_name}' tier '{tier_name}'",
+        })
+
+    # Template-defined resources
+    tpl_vlan_ids = {v["id"] for v in tier.get("vlans", [])}
+    tpl_ssid_nums = {s["number"] for s in tier.get("ssids", [])}
+    tpl_fw_comments = {r.get("comment", "") for r in tier.get("firewall_rules", [])}
+
+    # Build rendered template config per-site (need site vars for subnet rendering)
+    def render_tier_for_site(site_entry: Dict) -> Dict:
+        """Render template tier with site-specific variables."""
+        name = site_entry.get("name", "")
+        site_number = site_entry.get("site_number", 0)
+        location = site_entry.get("location", "")
+        variables = {
+            "name": name,
+            "location": location,
+            "site_number": str(site_number),
+            "site_high": str(site_number // 256),
+            "site_low": str(site_number % 256),
+            "site_low_voip": str(site_number % 256 + 1),
+            "site_low_iot": str(site_number % 256 + 2),
+            "site_low_mgmt": str(site_number % 256 + 3),
+        }
+        return render_value(tier, variables)
+
+    all_results = []
+
+    for site in sites:
+        network_id = site["network_id"]
+        site_name = site["name"]
+        site_log = []
+        skipped = False
+
+        # ── Safety check: verify 'automated' tag in Meraki ──
+        try:
+            live_net = dashboard.networks.getNetwork(network_id)
+            live_tags = live_net.get("tags", [])
+            if "automated" not in live_tags:
+                all_results.append({
+                    "site": site_name,
+                    "network_id": network_id,
+                    "status": "skipped",
+                    "reason": f"Missing 'automated' tag (tags: {live_tags}). Site may be manually managed.",
+                    "changes": [],
+                    "customizations": [],
+                })
+                continue
+        except Exception as e:
+            all_results.append({
+                "site": site_name,
+                "network_id": network_id,
+                "status": "error",
+                "reason": f"Could not fetch network from Meraki: {e}",
+                "changes": [],
+                "customizations": [],
+            })
+            continue
+
+        # ── Render template for this site ──
+        rendered = render_tier_for_site(site)
+        rendered_vlans = {v["id"]: v for v in rendered.get("vlans", [])}
+        rendered_ssids = {s["number"]: s for s in rendered.get("ssids", [])}
+        rendered_fw = rendered.get("firewall_rules", [])
+        rendered_vpn = rendered.get("vpn", {})
+
+        # ── Get live state from Meraki ──
+        live_vlans = {}
+        try:
+            vlist = dashboard.appliance.getNetworkApplianceVlans(network_id)
+            live_vlans = {v["id"]: v for v in vlist}
+        except Exception as e:
+            site_log.append({"step": "fetch_vlans", "status": "error", "error": str(e)})
+
+        live_ssids = {}
+        try:
+            slist = dashboard.wireless.getNetworkWirelessSsids(network_id)
+            live_ssids = {s["number"]: s for s in slist}
+        except Exception as e:
+            site_log.append({"step": "fetch_ssids", "status": "error", "error": str(e)})
+
+        live_fw_rules = []
+        try:
+            fw = dashboard.appliance.getNetworkApplianceFirewallL3FirewallRules(network_id)
+            live_fw_rules = [
+                r for r in fw.get("rules", [])
+                if r.get("comment") != "Default rule"
+            ]
+        except Exception as e:
+            site_log.append({"step": "fetch_firewall", "status": "error", "error": str(e)})
+
+        # Registry VLAN/SSID IDs (what template originally provisioned + synced)
+        reg_vlan_ids = {v["id"] for v in site.get("vlans", [])}
+        reg_ssid_nums = {s["number"] for s in site.get("ssids", [])}
+
+        changes = []
+        customizations = []
+
+        # ── Detect customizations ──
+        # VLANs in live state not in template (old or new)
+        for vid, vdata in live_vlans.items():
+            if vid not in tpl_vlan_ids and vid != 1:  # VLAN 1 is Meraki default
+                customizations.append({
+                    "type": "custom_vlan",
+                    "vlan_id": vid,
+                    "name": vdata.get("name", ""),
+                    "action": "preserved",
+                })
+
+        # SSIDs enabled in live state not in template
+        for snum, sdata in live_ssids.items():
+            if sdata.get("enabled") and snum not in tpl_ssid_nums:
+                customizations.append({
+                    "type": "custom_ssid",
+                    "ssid_number": snum,
+                    "name": sdata.get("name", ""),
+                    "action": "preserved",
+                })
+
+        # Custom firewall rules (comments not in template)
+        live_fw_comments = {r.get("comment", "") for r in live_fw_rules}
+        for comment in live_fw_comments:
+            if comment and comment not in tpl_fw_comments:
+                customizations.append({
+                    "type": "custom_firewall_rule",
+                    "comment": comment,
+                    "action": "preserved",
+                })
+
+        # ── Compute changes: VLANs ──
+        # Add VLANs in template but not live
+        for vid, vdef in rendered_vlans.items():
+            if vid not in live_vlans:
+                changes.append({
+                    "action": "add_vlan",
+                    "vlan_id": vid,
+                    "name": vdef["name"],
+                    "subnet": vdef.get("subnet", ""),
+                })
+
+        # Remove VLANs that were in old registry (template-managed) but removed from template
+        for vid in reg_vlan_ids:
+            if vid not in tpl_vlan_ids and vid in live_vlans:
+                changes.append({
+                    "action": "remove_vlan",
+                    "vlan_id": vid,
+                    "name": live_vlans[vid].get("name", ""),
+                })
+
+        # Update VLANs that are in both template and live but have different subnets
+        for vid, vdef in rendered_vlans.items():
+            if vid in live_vlans:
+                live_subnet = live_vlans[vid].get("subnet", "")
+                tpl_subnet = vdef.get("subnet", "")
+                if tpl_subnet and live_subnet and tpl_subnet != live_subnet:
+                    changes.append({
+                        "action": "update_vlan",
+                        "vlan_id": vid,
+                        "name": vdef["name"],
+                        "old_subnet": live_subnet,
+                        "new_subnet": tpl_subnet,
+                    })
+
+        # ── Compute changes: SSIDs ──
+        for snum, sdef in rendered_ssids.items():
+            live_ssid = live_ssids.get(snum, {})
+            if not live_ssid.get("enabled") and sdef.get("enabled", True):
+                changes.append({
+                    "action": "enable_ssid",
+                    "ssid_number": snum,
+                    "name": sdef["name"],
+                })
+            elif live_ssid.get("name") != sdef["name"] and sdef.get("enabled", True):
+                changes.append({
+                    "action": "update_ssid",
+                    "ssid_number": snum,
+                    "old_name": live_ssid.get("name", ""),
+                    "new_name": sdef["name"],
+                })
+
+        # Disable SSIDs removed from template but still enabled
+        for snum in reg_ssid_nums:
+            if snum not in tpl_ssid_nums:
+                live_ssid = live_ssids.get(snum, {})
+                if live_ssid.get("enabled"):
+                    changes.append({
+                        "action": "disable_ssid",
+                        "ssid_number": snum,
+                        "name": live_ssid.get("name", ""),
+                    })
+
+        # ── Compute changes: Firewall rules ──
+        # Add template rules not in live
+        for rule in rendered_fw:
+            comment = rule.get("comment", "")
+            if comment not in live_fw_comments:
+                changes.append({
+                    "action": "add_firewall_rule",
+                    "comment": comment,
+                    "policy": rule.get("policy", ""),
+                })
+
+        # Remove rules that were template-managed but removed from template
+        old_tpl_fw = {r.get("comment", "") for r in site.get("firewall_rules", [])} if "firewall_rules" in site else set()
+        for comment in old_tpl_fw:
+            if comment and comment not in tpl_fw_comments and comment in live_fw_comments:
+                changes.append({
+                    "action": "remove_firewall_rule",
+                    "comment": comment,
+                })
+
+        if not changes:
+            all_results.append({
+                "site": site_name,
+                "network_id": network_id,
+                "status": "in_sync",
+                "changes": [],
+                "customizations": customizations,
+                "log": site_log,
+            })
+            continue
+
+        # ── Dry run: just report ──
+        if dry_run:
+            all_results.append({
+                "site": site_name,
+                "network_id": network_id,
+                "status": "changes_pending",
+                "changes": changes,
+                "customizations": customizations,
+            })
+            continue
+
+        # ── Apply changes ──
+        for change in changes:
+            action = change["action"]
+
+            if action == "add_vlan":
+                try:
+                    vdef = rendered_vlans[change["vlan_id"]]
+                    dashboard.appliance.createNetworkApplianceVlan(
+                        network_id,
+                        id=str(change["vlan_id"]),
+                        name=vdef["name"],
+                        subnet=vdef.get("subnet", ""),
+                        applianceIp=vdef.get("appliance_ip", ""),
+                    )
+                    # Set DHCP if specified
+                    dhcp = vdef.get("dhcp_handling")
+                    if dhcp:
+                        dashboard.appliance.updateNetworkApplianceVlan(
+                            network_id, str(change["vlan_id"]),
+                            dhcpHandling=dhcp,
+                            dnsNameservers=vdef.get("dns_nameservers", "upstream_dns"),
+                        )
+                    site_log.append({"step": f"add_vlan_{change['vlan_id']}", "status": "success"})
+                    logger.info(f"  [{site_name}] Added VLAN {change['vlan_id']} ({vdef['name']})")
+                except Exception as e:
+                    site_log.append({"step": f"add_vlan_{change['vlan_id']}", "status": "failed", "error": str(e)})
+
+            elif action == "remove_vlan":
+                try:
+                    dashboard.appliance.deleteNetworkApplianceVlan(network_id, str(change["vlan_id"]))
+                    site_log.append({"step": f"remove_vlan_{change['vlan_id']}", "status": "success"})
+                    logger.info(f"  [{site_name}] Removed VLAN {change['vlan_id']}")
+                except Exception as e:
+                    site_log.append({"step": f"remove_vlan_{change['vlan_id']}", "status": "failed", "error": str(e)})
+
+            elif action == "update_vlan":
+                try:
+                    vdef = rendered_vlans[change["vlan_id"]]
+                    dashboard.appliance.updateNetworkApplianceVlan(
+                        network_id, str(change["vlan_id"]),
+                        subnet=vdef.get("subnet", ""),
+                        applianceIp=vdef.get("appliance_ip", ""),
+                    )
+                    site_log.append({"step": f"update_vlan_{change['vlan_id']}", "status": "success"})
+                    logger.info(f"  [{site_name}] Updated VLAN {change['vlan_id']} subnet")
+                except Exception as e:
+                    site_log.append({"step": f"update_vlan_{change['vlan_id']}", "status": "failed", "error": str(e)})
+
+            elif action == "enable_ssid" or action == "update_ssid":
+                try:
+                    sdef = rendered_ssids[change.get("ssid_number")]
+                    params = {
+                        "name": sdef["name"],
+                        "enabled": True,
+                        "authMode": sdef.get("auth_mode", "psk"),
+                        "ipAssignmentMode": sdef.get("ip_assignment_mode", "Bridge mode"),
+                    }
+                    if sdef.get("encryption_mode"):
+                        params["encryptionMode"] = sdef["encryption_mode"]
+                    if sdef.get("psk"):
+                        params["psk"] = sdef["psk"]
+                    if sdef.get("default_vlan_id"):
+                        params["useVlanTagging"] = True
+                        params["defaultVlanId"] = sdef["default_vlan_id"]
+                    dashboard.wireless.updateNetworkWirelessSsid(
+                        network_id, str(change["ssid_number"]), **params
+                    )
+                    site_log.append({"step": f"{action}_{change['ssid_number']}", "status": "success"})
+                    logger.info(f"  [{site_name}] {action} SSID {change['ssid_number']}")
+                except Exception as e:
+                    site_log.append({"step": f"{action}_{change['ssid_number']}", "status": "failed", "error": str(e)})
+
+            elif action == "disable_ssid":
+                try:
+                    dashboard.wireless.updateNetworkWirelessSsid(
+                        network_id, str(change["ssid_number"]), enabled=False
+                    )
+                    site_log.append({"step": f"disable_ssid_{change['ssid_number']}", "status": "success"})
+                    logger.info(f"  [{site_name}] Disabled SSID {change['ssid_number']}")
+                except Exception as e:
+                    site_log.append({"step": f"disable_ssid_{change['ssid_number']}", "status": "failed", "error": str(e)})
+
+            elif action == "add_firewall_rule" or action == "remove_firewall_rule":
+                pass  # Handled in batch below
+
+        # ── Batch firewall rule update ──
+        fw_adds = [c for c in changes if c["action"] == "add_firewall_rule"]
+        fw_removes = {c["comment"] for c in changes if c["action"] == "remove_firewall_rule"}
+
+        if fw_adds or fw_removes:
+            try:
+                # Start from current live rules
+                updated_rules = [r for r in live_fw_rules if r.get("comment", "") not in fw_removes]
+
+                # Add new template rules
+                for rule in rendered_fw:
+                    comment = rule.get("comment", "")
+                    if comment in {c["comment"] for c in fw_adds}:
+                        updated_rules.append({
+                            "comment": rule.get("comment", ""),
+                            "policy": rule.get("policy", "deny"),
+                            "protocol": rule.get("protocol", "any"),
+                            "srcCidr": rule.get("src_cidr", "Any"),
+                            "srcPort": rule.get("src_port", "Any"),
+                            "destCidr": rule.get("dest_cidr", "Any"),
+                            "destPort": rule.get("dest_port", "any"),
+                            "syslogEnabled": rule.get("syslog_enabled", False),
+                        })
+
+                dashboard.appliance.updateNetworkApplianceFirewallL3FirewallRules(
+                    network_id, rules=updated_rules
+                )
+                site_log.append({"step": "update_firewall", "status": "success",
+                                 "added": len(fw_adds), "removed": len(fw_removes)})
+                logger.info(f"  [{site_name}] Firewall rules updated (+{len(fw_adds)} -{len(fw_removes)})")
+            except Exception as e:
+                site_log.append({"step": "update_firewall", "status": "failed", "error": str(e)})
+
+        # ── Refresh registry from live state ──
+        registry_updates = {}
+        try:
+            refreshed_vlans = dashboard.appliance.getNetworkApplianceVlans(network_id)
+            registry_updates["vlans"] = [
+                {"id": v["id"], "name": v["name"], "subnet": v["subnet"]}
+                for v in refreshed_vlans
+            ]
+        except Exception:
+            pass
+        try:
+            refreshed_ssids = dashboard.wireless.getNetworkWirelessSsids(network_id)
+            registry_updates["ssids"] = [
+                {"number": s["number"], "name": s["name"]}
+                for s in refreshed_ssids if s.get("enabled")
+            ]
+        except Exception:
+            pass
+
+        registry_updates["last_synced_template"] = datetime.now(timezone.utc).isoformat()
+        update_registry_entry(network_id, registry_updates)
+
+        succeeded = sum(1 for s in site_log if s.get("status") == "success")
+        failed = sum(1 for s in site_log if s.get("status") == "failed")
+        status = "success" if failed == 0 else "partial" if succeeded > 0 else "failed"
+
+        all_results.append({
+            "site": site_name,
+            "network_id": network_id,
+            "status": status,
+            "changes": changes,
+            "customizations": customizations,
+            "log": site_log,
+            "summary": {"succeeded": succeeded, "failed": failed},
+        })
+
+    # ── Build final output ──
+    total_sites = len(all_results)
+    synced = sum(1 for r in all_results if r["status"] == "success")
+    in_sync = sum(1 for r in all_results if r["status"] == "in_sync")
+    skipped_count = sum(1 for r in all_results if r["status"] == "skipped")
+    pending = sum(1 for r in all_results if r["status"] == "changes_pending")
+    errors = sum(1 for r in all_results if r["status"] in ("failed", "error", "partial"))
+
+    result = {
+        "mode": "dry_run" if dry_run else "applied",
+        "template": template_name,
+        "tier": tier_name,
+        "summary": {
+            "total_sites": total_sites,
+            "synced": synced,
+            "already_in_sync": in_sync,
+            "changes_pending": pending,
+            "skipped": skipped_count,
+            "errors": errors,
+        },
+        "sites": all_results,
+    }
+
+    if dry_run and pending > 0:
+        result["next_step"] = (
+            f"Run auto_sync_template with template='{template_name}', tier='{tier_name}', "
+            "dry_run=false to apply these changes."
+        )
+
+    return json.dumps(result, indent=2, default=str)
+
+
+# ──────────────────────────────────────────────
 # Tool dispatcher
 # ──────────────────────────────────────────────
 
@@ -1128,6 +2143,10 @@ def execute_tool(name: str, args: Dict) -> str:
         return tool_get_network_config(args)
     elif name == "auto_update_branch_network":
         return tool_update_branch_network(args)
+    elif name == "auto_update_template":
+        return tool_update_template(args)
+    elif name == "auto_sync_template":
+        return tool_sync_template(args)
     else:
         return json.dumps({"error": f"Unknown tool: {name}"})
 
@@ -1475,6 +2494,588 @@ async def list_tools_endpoint(request: web.Request) -> web.Response:
 
 
 # ──────────────────────────────────────────────
+# Dashboard — read-only web UI
+# ──────────────────────────────────────────────
+
+async def handle_api_registry(request: web.Request) -> web.Response:
+    """Return the network registry as JSON."""
+    return web.json_response(load_registry())
+
+
+async def handle_api_templates(request: web.Request) -> web.Response:
+    """Return loaded templates as JSON (strip PSK secrets)."""
+    sanitized = {}
+    for tpl_name, tpl_data in templates.items():
+        sanitized[tpl_name] = {
+            "product_types": tpl_data.get("product_types", []),
+            "tiers": {},
+        }
+        for tier_name, tier_cfg in tpl_data.get("tiers", {}).items():
+            tier_copy = {
+                "description": tier_cfg.get("description", ""),
+                "vlans": tier_cfg.get("vlans", []),
+                "ssids": [],
+                "firewall_rules": tier_cfg.get("firewall_rules", []),
+                "vpn": tier_cfg.get("vpn", {}),
+            }
+            for ssid in tier_cfg.get("ssids", []):
+                s = dict(ssid)
+                if "psk" in s:
+                    s["psk"] = "********"
+                tier_copy["ssids"].append(s)
+            sanitized[tpl_name]["tiers"][tier_name] = tier_copy
+    return web.json_response(sanitized)
+
+
+DASHBOARD_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automation MCP Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232733;
+    --border: #2e3345;
+    --text: #e1e4ed;
+    --text2: #8b91a5;
+    --accent: #6c8cff;
+    --accent2: #4a6adf;
+    --green: #34d399;
+    --red: #f87171;
+    --orange: #fbbf24;
+    --tag-bg: #2a2f40;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .subtitle {
+    color: var(--text2);
+    font-size: 0.875rem;
+    margin-bottom: 2rem;
+  }
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+  .tab {
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    color: var(--text2);
+    border-bottom: 2px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Network cards */
+  .net-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .net-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .net-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  .net-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .net-id {
+    font-size: 0.7rem;
+    color: var(--text2);
+    font-family: monospace;
+  }
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-success { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .badge-fail { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+  .badge-tier { background: rgba(108, 140, 255, 0.15); color: var(--accent); }
+
+  .net-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+  }
+  .net-section {
+    flex: 1;
+    min-width: 160px;
+  }
+  .net-section-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text2);
+    margin-bottom: 0.35rem;
+  }
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .tag {
+    background: var(--tag-bg);
+    color: var(--text2);
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-family: monospace;
+  }
+  table.mini {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  table.mini th {
+    text-align: left;
+    color: var(--text2);
+    font-weight: 500;
+    padding: 0.25rem 0.5rem 0.25rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  table.mini td {
+    padding: 0.25rem 0.5rem 0.25rem 0;
+    border-bottom: 1px solid var(--border);
+    font-family: monospace;
+    font-size: 0.75rem;
+  }
+  .ts {
+    font-size: 0.7rem;
+    color: var(--text2);
+    margin-top: 0.75rem;
+  }
+
+  /* Template view */
+  .tpl-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  .tpl-header {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+  }
+  .tpl-header:hover { background: var(--surface2); border-radius: 8px; }
+  .tpl-title {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  .tpl-desc {
+    color: var(--text2);
+    font-size: 0.8rem;
+  }
+  .tpl-chevron {
+    color: var(--text2);
+    transition: transform 0.2s;
+    font-size: 1.2rem;
+  }
+  .tpl-section.open .tpl-chevron { transform: rotate(90deg); }
+  .tpl-body {
+    display: none;
+    padding: 0 1.25rem 1.25rem;
+  }
+  .tpl-section.open .tpl-body { display: block; }
+  .tpl-sub {
+    margin-top: 1rem;
+  }
+  .tpl-sub-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+  table.tpl-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  table.tpl-table th {
+    text-align: left;
+    color: var(--text2);
+    font-weight: 500;
+    padding: 0.35rem 0.75rem 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  table.tpl-table td {
+    padding: 0.35rem 0.75rem 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  table.tpl-table td.mono {
+    font-family: monospace;
+    font-size: 0.75rem;
+  }
+  .fw-deny { color: var(--red); }
+  .fw-allow { color: var(--green); }
+  .vpn-badge {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .vpn-yes { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .vpn-no { background: rgba(139, 145, 165, 0.1); color: var(--text2); }
+
+  .addr-scheme {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.8rem;
+    line-height: 1.8;
+  }
+  .addr-scheme code {
+    font-family: monospace;
+    color: var(--accent);
+  }
+
+  .raw-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    font-family: monospace;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text);
+    overflow-x: auto;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text2);
+  }
+  .loading {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text2);
+  }
+  @media (max-width: 600px) {
+    body { padding: 1rem; }
+    .net-grid { gap: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+<h1>Automation MCP</h1>
+<p class="subtitle">Network provisioning registry and templates</p>
+
+<div class="tabs">
+  <div class="tab active" data-panel="registry">Managed Networks</div>
+  <div class="tab" data-panel="templates">Branch Templates</div>
+  <div class="tab" data-panel="raw">Raw Files</div>
+</div>
+
+<div id="registry" class="panel active">
+  <div class="loading" id="reg-loading">Loading registry...</div>
+  <div class="net-grid" id="reg-grid"></div>
+</div>
+
+<div id="templates" class="panel">
+  <div class="addr-scheme">
+    <strong>Addressing Scheme</strong><br>
+    Corp &rarr; <code>10.{site_high}.{site_low}.0/24</code> (unique per site, routed over VPN)<br>
+    Guest &rarr; <code>192.168.100.0/24</code> (same everywhere, local only)<br>
+    VoIP &rarr; <code>10.{site_high}.{site_low+1}.0/24</code> (unique per site, routed over VPN)<br>
+    IoT &rarr; <code>10.{site_high}.{site_low+2}.0/24</code> (unique per site, routed over VPN)
+  </div>
+  <div class="loading" id="tpl-loading">Loading templates...</div>
+  <div id="tpl-container"></div>
+</div>
+
+<div id="raw" class="panel">
+  <div class="tpl-section">
+    <div class="tpl-header" onclick="this.parentElement.classList.toggle(&quot;open&quot;)">
+      <div><div class="tpl-title">network_registry.yaml</div>
+      <div class="tpl-desc">Managed network inventory</div></div>
+      <span class="tpl-chevron">&#9654;</span>
+    </div>
+    <div class="tpl-body">
+      <pre class="raw-block" id="raw-registry"></pre>
+    </div>
+  </div>
+  <div class="tpl-section">
+    <div class="tpl-header" onclick="this.parentElement.classList.toggle(&quot;open&quot;)">
+      <div><div class="tpl-title">branch.yaml</div>
+      <div class="tpl-desc">Branch network provisioning template</div></div>
+      <span class="tpl-chevron">&#9654;</span>
+    </div>
+    <div class="tpl-body">
+      <pre class="raw-block" id="raw-template"></pre>
+    </div>
+  </div>
+</div>
+
+<script data-cfasync="false">
+  /*__INLINE_DATA__*/
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.panel).classList.add('active');
+  });
+});
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-CA') + ' ' + d.toLocaleTimeString('en-CA', {hour:'2-digit',minute:'2-digit'});
+}
+
+// Render registry
+(function() {
+  const data = window.__REGISTRY__ || [];
+  document.getElementById('reg-loading').style.display = 'none';
+  const grid = document.getElementById('reg-grid');
+  if (!data.length) {
+    grid.innerHTML = '<div class="empty-state">No managed networks yet</div>';
+    return;
+  }
+  data.forEach(net => {
+    const status = net.provisioned_status || 'unknown';
+    const badgeClass = status === 'success' ? 'badge-success' : 'badge-fail';
+    let vlansHtml = '';
+    if (net.vlans && net.vlans.length) {
+      vlansHtml = '<table class="mini"><tr><th>ID</th><th>Name</th><th>Subnet</th></tr>';
+      net.vlans.forEach(v => {
+        vlansHtml += '<tr><td>' + esc(String(v.id)) + '</td><td>' + esc(v.name) + '</td><td>' + esc(v.subnet) + '</td></tr>';
+      });
+      vlansHtml += '</table>';
+    }
+    let ssidsHtml = '';
+    if (net.ssids && net.ssids.length) {
+      ssidsHtml = net.ssids.map(s => '<span class="tag">' + esc(s.name) + '</span>').join('');
+    }
+    let tagsHtml = '';
+    if (net.tags && net.tags.length) {
+      tagsHtml = net.tags.map(t => '<span class="tag">' + esc(t) + '</span>').join('');
+    }
+
+    const card = document.createElement('div');
+    card.className = 'net-card';
+    card.innerHTML =
+      '<div class="net-header">' +
+        '<div><div class="net-name">' + esc(net.name) + '</div>' +
+        '<div class="net-id">' + esc(net.network_id || '') + '</div></div>' +
+        '<div><span class="badge badge-tier">' + esc(net.tier || '') + '</span> ' +
+        '<span class="badge ' + badgeClass + '">' + esc(status) + '</span></div>' +
+      '</div>' +
+      '<div class="net-body">' +
+        '<div class="net-section"><div class="net-section-title">VLANs</div>' + vlansHtml + '</div>' +
+        '<div class="net-section"><div class="net-section-title">SSIDs</div><div class="tag-list">' + ssidsHtml + '</div></div>' +
+        (net.product_types ? '<div class="net-section"><div class="net-section-title">Product Types</div><div class="tag-list">' + net.product_types.map(p => '<span class="tag">' + esc(p) + '</span>').join('') + '</div></div>' : '') +
+        (net.vpn_mode ? '<div class="net-section"><div class="net-section-title">VPN</div><span class="tag">' + esc(net.vpn_mode) + '</span></div>' : '') +
+        (tagsHtml ? '<div class="net-section"><div class="net-section-title">Tags</div><div class="tag-list">' + tagsHtml + '</div></div>' : '') +
+      '</div>' +
+      '<div class="ts">Provisioned: ' + esc(formatDate(net.provisioned_at)) +
+        (net.last_modified ? ' &nbsp;&middot;&nbsp; Modified: ' + esc(formatDate(net.last_modified)) : '') + '</div>';
+    grid.appendChild(card);
+  });
+})();
+
+// Render templates
+(function() {
+  const data = window.__TEMPLATES__ || {};
+  document.getElementById('tpl-loading').style.display = 'none';
+  const container = document.getElementById('tpl-container');
+  Object.entries(data).forEach(([tplName, tpl]) => {
+    Object.entries(tpl.tiers || {}).forEach(([tierName, tier]) => {
+      const section = document.createElement('div');
+      section.className = 'tpl-section';
+
+      // VLANs table
+      let vlansHtml = '<table class="tpl-table"><tr><th>ID</th><th>Name</th><th>Subnet</th><th>Gateway</th><th>DHCP</th></tr>';
+      (tier.vlans || []).forEach(v => {
+        vlansHtml += '<tr><td>' + esc(String(v.id)) + '</td><td>' + esc(v.name) +
+          '</td><td class="mono">' + esc(v.subnet) + '</td><td class="mono">' + esc(v.appliance_ip || '') +
+          '</td><td>' + esc(v.dhcp_handling || '') + '</td></tr>';
+      });
+      vlansHtml += '</table>';
+
+      // SSIDs table
+      let ssidsHtml = '<table class="tpl-table"><tr><th>#</th><th>Name</th><th>Auth</th><th>VLAN</th><th>IP Mode</th></tr>';
+      (tier.ssids || []).forEach(s => {
+        ssidsHtml += '<tr><td>' + s.number + '</td><td>' + esc(s.name) +
+          '</td><td>' + esc(s.auth_mode || '') + '</td><td>' + (s.default_vlan_id || '') +
+          '</td><td>' + esc(s.ip_assignment_mode || '') + '</td></tr>';
+      });
+      ssidsHtml += '</table>';
+
+      // Firewall rules
+      let fwHtml = '<table class="tpl-table"><tr><th>Policy</th><th>Comment</th><th>Src</th><th>Dst</th><th>Proto</th></tr>';
+      (tier.firewall_rules || []).forEach(r => {
+        const cls = r.policy === 'deny' ? 'fw-deny' : 'fw-allow';
+        fwHtml += '<tr><td class="' + cls + '">' + esc(r.policy) +
+          '</td><td>' + esc(r.comment || '') + '</td><td class="mono">' + esc(r.src_cidr || '') +
+          '</td><td class="mono">' + esc(r.dest_cidr || '') + '</td><td>' + esc(r.protocol || '') + '</td></tr>';
+      });
+      fwHtml += '</table>';
+
+      // VPN
+      let vpnHtml = '';
+      if (tier.vpn) {
+        vpnHtml = '<div><strong>Mode:</strong> ' + esc(tier.vpn.mode || '') + '</div>';
+        if (tier.vpn.hubs && tier.vpn.hubs.length) {
+          vpnHtml += '<div style="margin-top:0.35rem"><strong>Hubs:</strong> ' +
+            tier.vpn.hubs.map(h => esc(h.name || h.hub_id)).join(', ') + '</div>';
+        }
+        if (tier.vpn.subnets && tier.vpn.subnets.length) {
+          vpnHtml += '<table class="tpl-table" style="margin-top:0.5rem"><tr><th>Subnet</th><th>VPN</th></tr>';
+          tier.vpn.subnets.forEach(s => {
+            const cls = s.use_vpn ? 'vpn-yes' : 'vpn-no';
+            vpnHtml += '<tr><td class="mono">' + esc(s.local_subnet) +
+              '</td><td><span class="vpn-badge ' + cls + '">' + (s.use_vpn ? 'routed' : 'local') + '</span></td></tr>';
+          });
+          vpnHtml += '</table>';
+        }
+      }
+
+      section.innerHTML =
+        '<div class="tpl-header" onclick="this.parentElement.classList.toggle(&quot;open&quot;)">' +
+          '<div><div class="tpl-title">' + esc(tierName.charAt(0).toUpperCase() + tierName.slice(1)) + '</div>' +
+          '<div class="tpl-desc">' + esc(tier.description || '') + '</div></div>' +
+          '<span class="tpl-chevron">&#9654;</span>' +
+        '</div>' +
+        '<div class="tpl-body">' +
+          '<div class="tpl-sub"><div class="tpl-sub-title">VLANs</div>' + vlansHtml + '</div>' +
+          '<div class="tpl-sub"><div class="tpl-sub-title">SSIDs</div>' + ssidsHtml + '</div>' +
+          '<div class="tpl-sub"><div class="tpl-sub-title">Firewall Rules</div>' + fwHtml + '</div>' +
+          '<div class="tpl-sub"><div class="tpl-sub-title">VPN</div>' + vpnHtml + '</div>' +
+        '</div>';
+      container.appendChild(section);
+    });
+  });
+})();
+
+// Render raw files
+document.getElementById('raw-registry').textContent = window.__RAW_REGISTRY__ || '';
+document.getElementById('raw-template').textContent = window.__RAW_TEMPLATE__ || '';
+</script>
+</body>
+</html>"""
+
+
+async def handle_dashboard(request: web.Request) -> web.Response:
+    """Serve the dashboard HTML page with data inlined."""
+    # Build registry JSON
+    registry_data = json.dumps(load_registry(), default=str)
+
+    # Build sanitized template JSON (strip PSKs)
+    sanitized = {}
+    for tpl_name, tpl_data in templates.items():
+        sanitized[tpl_name] = {
+            "product_types": tpl_data.get("product_types", []),
+            "tiers": {},
+        }
+        for tier_name, tier_cfg in tpl_data.get("tiers", {}).items():
+            tier_copy = {
+                "description": tier_cfg.get("description", ""),
+                "vlans": tier_cfg.get("vlans", []),
+                "ssids": [],
+                "firewall_rules": tier_cfg.get("firewall_rules", []),
+                "vpn": tier_cfg.get("vpn", {}),
+            }
+            for ssid in tier_cfg.get("ssids", []):
+                s = dict(ssid)
+                if "psk" in s:
+                    s["psk"] = "********"
+                tier_copy["ssids"].append(s)
+            sanitized[tpl_name]["tiers"][tier_name] = tier_copy
+    templates_data = json.dumps(sanitized, default=str)
+
+    # Read raw YAML files for the Raw Files tab
+    raw_registry = ""
+    try:
+        with open(NETWORK_REGISTRY_PATH, "r") as f:
+            raw_registry = f.read()
+    except Exception:
+        raw_registry = "(file not found)"
+
+    raw_template = ""
+    try:
+        tpl_path = os.path.join(TEMPLATE_DIR, "branch.yaml")
+        with open(tpl_path, "r") as f:
+            raw_template = f.read()
+    except Exception:
+        raw_template = "(file not found)"
+
+    # Escape for safe embedding in JS string
+    raw_registry_js = json.dumps(raw_registry)
+    raw_template_js = json.dumps(raw_template)
+
+    # Inject data into HTML, replacing the fetch calls
+    html = DASHBOARD_HTML.replace(
+        "/*__INLINE_DATA__*/",
+        f"window.__REGISTRY__ = {registry_data};\n"
+        f"  window.__TEMPLATES__ = {templates_data};\n"
+        f"  window.__RAW_REGISTRY__ = {raw_registry_js};\n"
+        f"  window.__RAW_TEMPLATE__ = {raw_template_js};"
+    )
+    return web.Response(text=html, content_type="text/html")
+
+
+# ──────────────────────────────────────────────
 # App setup
 # ──────────────────────────────────────────────
 
@@ -1484,6 +3085,9 @@ def create_app() -> web.Application:
     app.router.add_post("/", handle_mcp_request)
     app.router.add_get("/health", health_check)
     app.router.add_get("/tools", list_tools_endpoint)
+    app.router.add_get("/dashboard", handle_dashboard)
+    app.router.add_get("/api/registry", handle_api_registry)
+    app.router.add_get("/api/templates", handle_api_templates)
     app.router.add_get(
         "/.well-known/oauth-protected-resource",
         handle_protected_resource_metadata,
